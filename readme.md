@@ -18,9 +18,21 @@
 
 ## 📁 โครงสร้างโปรเจกต์
 
-
-email-monitor/ ├── .env ├── main.py ├── requirements.txt ├── run_monitor.bat ├── setup_monitor.bat ├── cache/ │   ├── notified_subjects.json │   └── notified_documents.json ├── utils/ │   ├── telegram.py │   ├── email_checker.py │   └── document_checker.py
+email-monitor/
+├── .env                      # เก็บค่าคอนฟิกลับ เช่น token, password, URL
+├── main.py                   # สคริปต์หลักสำหรับตรวจอีเมลและเอกสาร
+├── requirements.txt          # รายการไลบรารีที่ต้องติดตั้ง
+├── run_monitor.bat           # รันระบบตรวจสอบทันที (Windows)
+├── setup_monitor.bat         # ติดตั้ง environment และ dependencies
 
+├── cache/                    # เก็บรายการที่แจ้งไปแล้ว
+│   ├── notified_subjects.json      # หัวข้ออีเมลที่เคยแจ้ง
+│   └── notified_documents.json     # หนังสือเข้าที่เคยแจ้ง
+
+├── utils/                    # โมดูลย่อยสำหรับแต่ละหน้าที่
+│   ├── telegram.py           # ฟังก์ชันส่งข้อความผ่าน Telegram
+│   ├── email_checker.py      # ตรวจสอบอีเมลจาก Outlook Web
+│   └── document_checker.py   # ตรวจสอบหนังสือเข้าจาก e-office
 ---
 
 ## ⚙️ การติดตั้ง
