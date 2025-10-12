@@ -24,11 +24,9 @@ email-monitor/
 ├── requirements.txt          # รายการไลบรารีที่ต้องติดตั้ง
 ├── run_monitor.bat           # รันระบบตรวจสอบทันที (Windows)
 ├── setup_monitor.bat         # ติดตั้ง environment และ dependencies
-
 ├── cache/                    # เก็บรายการที่แจ้งไปแล้ว
 │   ├── notified_subjects.json      # หัวข้ออีเมลที่เคยแจ้ง
 │   └── notified_documents.json     # หนังสือเข้าที่เคยแจ้ง
-
 ├── utils/                    # โมดูลย่อยสำหรับแต่ละหน้าที่
 │   ├── telegram.py           # ฟังก์ชันส่งข้อความผ่าน Telegram
 │   ├── email_checker.py      # ตรวจสอบอีเมลจาก Outlook Web
