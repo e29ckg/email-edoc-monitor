@@ -1,3 +1,4 @@
+# document_checker.py
 import time, json, random, os
 from datetime import datetime
 from selenium.webdriver.common.by import By
@@ -6,40 +7,44 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from utils.telegram import send_telegram
 from dotenv import load_dotenv
+from utils.logger import log
 
 load_dotenv()
 show_browser = os.getenv("SHOW_BROWSER", "false").lower() == "true"
-
 CACHE_FILE = "cache/notified_documents.json"
+
+MAX_DOCUMENTS = int(os.getenv("MAX_DOCUMENTS", "5"))
+NOTIFY_DOCUMENT = os.getenv("NOTIFY_DOCUMENT", "true").lower() == "true"
 
 def get_random_user_agent():
     user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.78 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.6530.45 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.6600.12 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6700.90 Safari/537.36"
+        # Windows 11 + Chrome 129
+        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6700.90 Safari/537.36",
+
+        # Windows 10 + Firefox 128
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+
+        # macOS 14 + Safari 18
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+
+        # Linux + Chrome 129
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6700.90 Safari/537.36",
+
+        # Windows 11 + Edge 129
+        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6700.90 Safari/537.36 Edg/129.0.6700.90"
     ]
     return random.choice(user_agents)
 
-def format_document_notification(entries):
-    lines = [f"📬 รายการหนังสือเข้า 5 รายการล่าสุด ({datetime.now().strftime('%d/%m/%Y %H:%M')}):\n"]
-    for idx, doc in enumerate(entries, start=1):
-        lines.append(
-            f"{idx}️⃣ <b>{doc['title']}</b>\n"
-            f"📁 เลขรับ: {doc['register']}\n"
-            f"📄 เลขที่หนังสือ: {doc['doc_no']}\n"
-            f"🏢 หน่วยงาน: {doc['sender']}\n"
-            f"🗓 เอกสาร: {doc['doc_date']}\n"
-            f"📥 รับ: {doc['receive_date']}\n"
-            f"👤 เจ้าหน้าที่: {doc['officer']}\n"
-            f"📎 ไฟล์: {doc['file_name']}\n"
-        )
-    return "\n".join(lines)
+def check_documents_once():
+    document_url = os.getenv("DOCUMENT_URL")
+    username = os.getenv("DOCUMENT_USER")
+    password = os.getenv("DOCUMENT_PASS")
 
-def check_documents(document_url, username, password, telegram_token, telegram_chat_id):
+    if not document_url or not username or not password:
+        log("❌ ไม่พบข้อมูล EOFFICE_URL / USER / PASS ใน .env")
+        return []
+
     try:
         with open(CACHE_FILE, "r", encoding="utf-8") as f:
             notified = set(json.load(f))
@@ -53,10 +58,12 @@ def check_documents(document_url, username, password, telegram_token, telegram_c
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument(f"user-agent={get_random_user_agent()}")
-    
+
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
     wait = WebDriverWait(driver, 20)
+
+    new_entries = []
 
     try:
         driver.get(document_url)
@@ -71,9 +78,8 @@ def check_documents(document_url, username, password, telegram_token, telegram_c
         time.sleep(5)
 
         wait.until(EC.presence_of_element_located((By.ID, "listForm:dataTable_data")))
-        rows = driver.find_elements(By.CSS_SELECTOR, 'tbody#listForm\\:dataTable_data > tr')[:5]
+        rows = driver.find_elements(By.CSS_SELECTOR, 'tbody#listForm\\:dataTable_data > tr')[:MAX_DOCUMENTS]
 
-        new_entries = []
         for row in rows:
             try:
                 cells = row.find_elements(By.TAG_NAME, "td")
@@ -100,20 +106,24 @@ def check_documents(document_url, username, password, telegram_token, telegram_c
                     })
                     notified.add(key)
             except Exception as e:
-                print("⚠️ ดึงข้อมูลแถวไม่สำเร็จ:", e)
+                log(f"⚠️ ดึงข้อมูลแถวไม่สำเร็จ: {e}")
 
-        if new_entries:
-            message = format_document_notification(new_entries)
-            send_telegram(telegram_token, telegram_chat_id, message)
-            with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(list(notified), f, ensure_ascii=False)
-        else:
-            msg = f"✅ ไม่มีหนังสือเข้าใหม่เวลา {datetime.now().strftime('%H:%M')}"
-            print(msg)
-            send_telegram(telegram_token, telegram_chat_id, msg)
+        element = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[3]/a[2]")))
+        element.click()
+        time.sleep(3)
+        element = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[@id=\"j_idt43\"]")))
+        element.click()
+        time.sleep(3)
+
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(notified), f, ensure_ascii=False)
+        if new_entries and NOTIFY_DOCUMENT:
+            return new_entries
 
     except Exception as e:
-        print("⚠️ ไม่สามารถโหลดเอกสาร:", e)
-        send_telegram(telegram_token, telegram_chat_id, "⚠️ ไม่สามารถโหลดเอกสารจาก e-office ได้")
+        log(f"⚠️ ไม่สามารถโหลดเอกสารจาก e-office ได้: {e}")
+
     finally:
         driver.quit()
+
+    return new_entries

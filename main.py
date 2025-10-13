@@ -1,36 +1,28 @@
-from dotenv import load_dotenv
-import os
-from utils.email_checker import check_email_loop
-from utils.document_checker import check_documents
+from utils.email_checker import check_email_once
+from utils.document_checker import check_documents_once
+from utils.telegram import notify
+from utils.logger import log
 
-load_dotenv()
+def main():
+    log("🚀 เริ่มตรวจสอบอีเมลและเอกสาร")
 
-# โหลดค่าจาก .env
-EMAIL = os.getenv("EMAIL_USER")
-PASSWORD = os.getenv("EMAIL_PASS")
-OWA_URL = os.getenv("OWA_URL")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-DOCUMENT_URL = os.getenv("DOCUMENT_URL")
-DOCUMENT_USER = os.getenv("DOCUMENT_USER")
-DOCUMENT_PASS = os.getenv("DOCUMENT_PASS")
+    # ตรวจสอบอีเมลใหม่
+    email_results = check_email_once()
+    if email_results:
+        log(f"📧 พบอีเมลใหม่จำนวน {len(email_results)} ฉบับ")
+        notify(email_results, source="email")
+    else:
+        log("📭 ไม่พบอีเมลใหม่")
 
-# ตรวจอีเมลทันที
-check_email_loop(
-    email=EMAIL,
-    password=PASSWORD,
-    url=OWA_URL,
-    check_times=[],  # ✅ เวลาว่าง = ตรวจทันที
-    telegram_token=TELEGRAM_TOKEN,
-    telegram_chat_id=TELEGRAM_CHAT_ID
-)
+    # ตรวจสอบเอกสารใหม่
+    doc_results = check_documents_once()
+    if doc_results:
+        log(f"📄 พบเอกสารใหม่จำนวน {len(doc_results)} รายการ")
+        notify(doc_results, source="document")
+    else:
+        log("📁 ไม่พบเอกสารใหม่")
 
-# ตรวจเอกสารทันที
-check_documents(
-    document_url=DOCUMENT_URL,
-    username=DOCUMENT_USER,
-    password=DOCUMENT_PASS,
-    telegram_token=TELEGRAM_TOKEN,
-    telegram_chat_id=TELEGRAM_CHAT_ID
+    log("✅ ตรวจสอบเสร็จสิ้น ระบบจะปิดตัวเอง")
 
-)
+if __name__ == "__main__":
+    main()
