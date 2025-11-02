@@ -2,6 +2,7 @@ import os
 import requests
 from utils.logger import log
 
+
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -41,3 +42,18 @@ def notify(items, source="unknown"):
                 log(f"⚠️ ส่ง Telegram ไม่สำเร็จ: {res.text}")
         except Exception as e:
             log(f"⚠️ Telegram error: {e}")
+
+def send_message(text: str):
+    if not TOKEN or not CHAT_ID:
+        log("⚠️ ไม่พบ TELEGRAM_TOKEN หรือ CHAT_ID")
+        return
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": text})
+
+def send_photo(photo_path: str, caption: str = ""):
+    if not TOKEN or not CHAT_ID:
+        log("⚠️ ไม่พบ TELEGRAM_TOKEN หรือ CHAT_ID")
+        return
+    url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+    with open(photo_path, "rb") as f:
+        requests.post(url, data={"chat_id": CHAT_ID, "caption": caption}, files={"photo": f})

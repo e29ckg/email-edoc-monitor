@@ -9,6 +9,23 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 from utils.logger import log
+from utils.telegram import send_photo
+import socket, urllib.parse
+import requests
+
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+def check_dns(url):
+    try:
+        hostname = urllib.parse.urlparse(url).hostname
+        socket.gethostbyname(hostname)
+        return True
+    except Exception as e:
+        log(f"❌ DNS resolve ไม่ได้: {e}")
+        return False
+
 
 load_dotenv()
 show_browser = os.getenv("SHOW_BROWSER", "false").lower() == "true"
@@ -16,6 +33,21 @@ CACHE_FILE = "cache/notified_subjects.json"
 
 MAX_EMAILS = int(os.getenv("MAX_EMAILS", "5"))
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "true").lower() == "true"
+
+def send_telegram_photo(driver, caption=""):
+    screenshot_path = "cache/screenshot.png"
+    driver.save_screenshot(screenshot_path)
+    try:
+        with open(screenshot_path, "rb") as f:
+            requests.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto",
+                data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption},
+                files={"photo": f},
+                timeout=20
+            )
+        print(">>> ส่ง screenshot ไป Telegram แล้ว")
+    except Exception as e:
+        print(f"ไม่สามารถส่ง screenshot Telegram: {e}")
 
 def get_random_user_agent():
     user_agents = [
@@ -45,12 +77,12 @@ def check_email_once():
         log("❌ ไม่พบข้อมูล OUTLOOK_EMAIL / PASSWORD / URL ใน .env")
         return []
 
-    try:
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            notified_subjects = set(json.load(f))
-    except:
-        notified_subjects = set()
+    if not check_dns(url):
+        return []
 
+    prefs = {
+        "profile.default_content_setting_values.notifications": 2  # 1=allow, 2=block
+    }
     options = webdriver.ChromeOptions()
     if not show_browser:
         options.add_argument("--headless=new")
@@ -58,71 +90,71 @@ def check_email_once():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument(f"user-agent={get_random_user_agent()}")
+    options.add_experimental_option("prefs", prefs)
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
     wait = WebDriverWait(driver, 20)
 
-    new_items = []
+    cookies_path = "cache/cookies.json"
+    logged_in = False
 
     try:
         driver.get(url)
 
-        # เข้าสู่ระบบ
+        # if os.path.exists(cookies_path):
+            # try:
+            #     with open(cookies_path, "r", encoding="utf-8") as f:
+            #         cookies = json.load(f)
+            #         for cookie in cookies:
+            #             driver.add_cookie(cookie)
+            #     driver.refresh()
+            #     log("🍪 โหลด cookies แล้วลองเข้าใช้งาน")
+
+            #     # ตรวจสอบว่ามี element ที่บ่งบอกว่า login แล้ว
+            #     try:
+            #         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='option']")))
+            #         logged_in = True
+            #         log("✅ ใช้ cookies login สำเร็จ")
+            #     except:
+            #         log("⚠️ cookies ใช้ไม่ได้ ต้อง login ใหม่")
+            # except Exception as e:
+            #     log(f"⚠️ โหลด cookies ไม่สำเร็จ: {e}")
+
+        # ถ้า cookies ใช้ไม่ได้ → login ปกติ
+        # if not logged_in:
+
         try:
-            wait.until(EC.presence_of_element_located((By.ID, 'userNameInput'))).send_keys(email)
-            wait.until(EC.presence_of_element_located((By.ID, 'passwordInput'))).send_keys(password)
-            wait.until(EC.element_to_be_clickable((By.ID, "submitButton"))).click()
-            time.sleep(5)
+            driver.refresh()
+            wait.until(EC.presence_of_element_located((By.ID, 'username'))).send_keys(email)
+            time.sleep(1)
+            wait.until(EC.presence_of_element_located((By.ID, 'password'))).send_keys(password)
+            time.sleep(1)
+            wait.until(EC.element_to_be_clickable((By.ID, 'loginButton'))).click()
+            time.sleep(5)  # รอโหลดหน้า
+            
+            driver.get('https://mail.workd.go.th/modern/email/Inbox')
+            wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//main[contains(@class,'zimbra-client_app_main')]")
+            ))
+
+            log("✅ เข้าสู่ระบบอีเมลสำเร็จ")
+
+            # ถ่าย screenshot
+            send_telegram_photo(driver, caption="✅ เข้าสู่ระบบอีเมลสำเร็จ")
+
+            # บันทึก cookies ใหม่
+            # with open(cookies_path, "w", encoding="utf-8") as f:
+            #     json.dump(driver.get_cookies(), f, ensure_ascii=False, indent=2)
+            # log(f"🍪 บันทึก cookies ลง {cookies_path} เรียบร้อย")
+
+            logged_in = True
         except Exception as e:
             log(f"⚠️ เข้าสู่ระบบล้มเหลว: {e}")
 
-        # โหลด inbox
-        try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[role='option']")))
-            emails = driver.find_elements(By.CSS_SELECTOR, "div[role='option']")[:MAX_EMAILS]
-
-            for email in emails:
-                try:
-                    sender = email.find_element(By.CLASS_NAME, "lvHighlightFromClass").text.strip()
-                except:
-                    sender = "(ไม่พบผู้ส่ง)"
-                try:
-                    subject = email.find_element(By.CLASS_NAME, "lvHighlightSubjectClass").text.strip()
-                except:
-                    subject = "(ไม่มีหัวข้อ)"
-                try:
-                    date = email.find_element(By.CLASS_NAME, "_lvv_M").text.strip()
-                except:
-                    date = "(ไม่มีวันที่)"
-
-                key = f"{subject} — {sender} — {date}"
-                if key not in notified_subjects:
-                    new_items.append({
-                        "title": subject,
-                        "sender": sender,
-                        "timestamp": date
-                    })
-                    notified_subjects.add(key)
-
-            # อัปเดต cache
-            with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(list(notified_subjects), f, ensure_ascii=False)
-
-            if new_items and NOTIFY_EMAIL:
-                return new_items
-
-        except Exception as e:
-            log(f"⚠️ ไม่สามารถโหลด inbox ได้: {e}")
-
-        # ออกจากระบบ
-        try:
-            driver.get("https://webmail.workd.go.th/owa/logoff.owa")
-            time.sleep(3)
-        except:
-            pass
+    
 
     finally:
         driver.quit()
+    return []
         
-    return new_items
