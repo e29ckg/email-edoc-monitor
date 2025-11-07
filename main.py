@@ -5,19 +5,33 @@ from utils.telegram import notify
 from utils.logger import log
 
 def process_emails():
-    email_results = check_email_once()   
+    """ตรวจสอบอีเมลใหม่"""
+    try:
+        email_results = check_email_once()
+        if email_results:
+            notify("📧 พบอีเมลใหม่", email_results)
+        else:
+            log("ℹ️ ไม่พบอีเมลใหม่")
+    except Exception as e:
+        log(f"❌ เกิดข้อผิดพลาดในการตรวจสอบอีเมล: {e}")
 
 def process_documents():
-    doc_results = check_documents_once()
-    
+    """ตรวจสอบเอกสารใหม่"""
+    try:
+        doc_results = check_documents_once()
+        if doc_results:
+            notify("📄 พบเอกสารใหม่", doc_results)
+        else:
+            log("ℹ️ ไม่พบเอกสารใหม่")
+    except Exception as e:
+        log(f"❌ เกิดข้อผิดพลาดในการตรวจสอบเอกสาร: {e}")
+
 def main():
     log("🚀 เริ่มตรวจสอบอีเมลและเอกสาร")
 
     try:
-        if os.getenv("NOTIFY_EMAIL", "true").lower() == "true":
-            process_emails()
-        if os.getenv("NOTIFY_DOCUMENT", "true").lower() == "true":
-            process_documents()
+        process_emails()
+        # process_documents()
     except Exception as e:
         log(f"❌ เกิดข้อผิดพลาดใน main loop: {e}")
 
