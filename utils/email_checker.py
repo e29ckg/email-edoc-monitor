@@ -57,6 +57,24 @@ def get_random_user_agent():
     ]
     return random.choice(user_agents)
 
+def accept_cookies(driver):
+    """
+    กดยอมรับการใช้คุกกี้ ถ้ามี banner ปรากฏ
+    """
+    try:
+        # ตัวอย่าง locator ของปุ่มยอมรับคุกกี้
+        if safe_click(driver, (By.XPATH, "/html/body/app-root/app-login-layout/app-cookies-banner/div/div[2]/div[2]/p-button/button")):
+            time.sleep(1)
+            safe_click(driver, (By.XPATH, "/html/body/app-root/app-login-layout/app-cookies-banner/app-confirm-dialog[1]/p-dialog/div/div/div[3]/div/div/p-button[2]/button"))
+            log("🍪 กดยอมรับคุกกี้เรียบร้อย")
+            return True
+        elif safe_click(driver, (By.XPATH, "//button[contains(text(),'Accept')]")):
+            log("🍪 Accepted cookies successfully")
+            return True
+    except Exception as e:
+        log(f"⚠️ ไม่มี banner คุกกี้ให้กด: {e}")
+    return False
+
 def safe_click(driver, locator, timeout=10):
     try:
         element = WebDriverWait(driver, timeout).until(
@@ -138,7 +156,7 @@ def manage_cookies(driver, cookies_path, wait, email, password):
         time.sleep(2)
         wait.until(EC.presence_of_element_located(
             (By.XPATH, "/html/body/app-root/app-secure-layout/header/div/div/div[2]/div/button/div")
-        ))
+        )).click()
         log("✅ Login ใหม่สำเร็จ")
 
         with open(cookies_path, "w", encoding="utf-8") as f:
@@ -180,6 +198,8 @@ def check_email_once():
 
     try:
         driver.get(url)
+        accept_cookies(driver)
+        time.sleep(5)
         logged_in = manage_cookies(driver, cookies_path, wait, email, password)
 
         # 🔎 ตรวจสอบ login อีกครั้งด้วย check_login()
@@ -209,7 +229,7 @@ def check_email_once():
 
         log("✅ เข้าสู่ระบบอีเมลสำเร็จ")
         send_telegram_photo(driver, caption="✅ เข้าสู่ระบบอีเมลสำเร็จ")
-
+        return []
     finally:
         driver.quit()
 

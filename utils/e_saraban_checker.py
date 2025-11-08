@@ -12,11 +12,7 @@ from utils.logger import log
 
 load_dotenv()
 show_browser = os.getenv("SHOW_BROWSER", "false").lower() == "true"
-CACHE_FILE = "cache/notified_documents.json"
-
-MAX_DOCUMENTS = int(os.getenv("MAX_DOCUMENTS", "5"))
-NOTIFY_DOCUMENT = os.getenv("NOTIFY_DOCUMENT", "true").lower() == "true"
-
+CACHE_FILE = "cache/notified_esaraban.json"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -54,10 +50,10 @@ def send_telegram_photo(driver, caption=""):
     except Exception as e:
         print(f"ไม่สามารถส่ง screenshot Telegram: {e}")
 
-def check_documents_once():
-    document_url = os.getenv("DOCUMENT_URL")
-    username = os.getenv("DOCUMENT_USER")
-    password = os.getenv("DOCUMENT_PASS")
+def check_esaraban_once():
+    document_url = os.getenv("ESARABAN_URL")
+    username = os.getenv("ESARABAN_USER")
+    password = os.getenv("ESARABAN_PASS")
 
     if not document_url or not username or not password:
         log("❌ ไม่พบข้อมูล EOFFICE_URL / USER / PASS ใน .env")
@@ -81,29 +77,22 @@ def check_documents_once():
     driver = webdriver.Chrome(service=service, options=options)
     wait = WebDriverWait(driver, 20)
 
-    new_entries = []
-
     try:
         driver.get(document_url)
         time.sleep(3)
-        wait.until(EC.presence_of_element_located((By.ID, "loginForm:username")))
-        driver.find_element(By.ID, "loginForm:username").send_keys(username)
-        driver.find_element(By.ID, "loginForm:password").send_keys(password)
-        driver.find_element(By.ID, "loginForm:cmdLogin").click()
-        time.sleep(5)
+        wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[1]/dx-text-box/div/div[1]/input")))
+        driver.find_element(By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[1]/dx-text-box/div/div[1]/input").send_keys(username)
+        driver.find_element(By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[2]/dx-text-box/div/div[1]/input").send_keys(password)
+        driver.find_element(By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[4]/dx-button-improve/dx-button/div/span").click()
+        time.sleep(15)
 
-        driver.get('http://e-office.coj.intra/ESB/imd001')
-        time.sleep(5)
-
-        send_telegram_photo(driver, caption="✅ e-office")
-
-        
-        return new_entries
+        send_telegram_photo(driver, caption="✅ ระบบสารบรรณจังหวัด")
+        return []
 
     except Exception as e:
-        log(f"⚠️ ไม่สามารถโหลดเอกสารจาก e-office ได้: {e}")
+        log(f"⚠️ ไม่สามารถโหลดเอกสารจาก e-sarabun ได้: {e}")
 
     finally:
         driver.quit()
 
-    return new_entries
+    return []
