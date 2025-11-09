@@ -16,6 +16,10 @@ CACHE_FILE = "cache/notified_esaraban.json"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+document_url = os.getenv("ESARABAN_URL")
+username = os.getenv("ESARABAN_USER")
+password = os.getenv("ESARABAN_PASS")
+
 def get_random_user_agent():
     user_agents = [
         # Windows 11 + Chrome 129
@@ -51,9 +55,6 @@ def send_telegram_photo(driver, caption=""):
         print(f"ไม่สามารถส่ง screenshot Telegram: {e}")
 
 def check_esaraban_once():
-    document_url = os.getenv("ESARABAN_URL")
-    username = os.getenv("ESARABAN_USER")
-    password = os.getenv("ESARABAN_PASS")
 
     if not document_url or not username or not password:
         log("❌ ไม่พบข้อมูล EOFFICE_URL / USER / PASS ใน .env")
@@ -79,7 +80,6 @@ def check_esaraban_once():
 
     try:
         driver.get(document_url)
-        time.sleep(3)
         wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[1]/dx-text-box/div/div[1]/input")))
         driver.find_element(By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[1]/dx-text-box/div/div[1]/input").send_keys(username)
         driver.find_element(By.XPATH, "/html/body/app-root/app-login/div/div/div[2]/div/div[2]/form/div[2]/dx-text-box/div/div[1]/input").send_keys(password)
