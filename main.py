@@ -42,7 +42,7 @@ def main():
     log("🚀 เริ่มตรวจสอบอีเมลและเอกสาร")
 
     try:
-        # process_emails()
+        process_emails()
         process_documents()
         process_esarabun()
     except Exception as e:
