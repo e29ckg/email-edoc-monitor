@@ -14,16 +14,15 @@ from utils.telegram import send_photo
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-email = os.getenv("EMAIL_USER")
-password = os.getenv("EMAIL_PASS")
-url = os.getenv("OWA_URL")
+email = os.getenv("EMAIL_USER2")
+password = os.getenv("EMAIL_PASS2")
+url = os.getenv("OWA_URL2")
 
 show_browser = os.getenv("SHOW_BROWSER", "false").lower() == "true"
 CACHE_FILE = "cache/notified_subjects.json"
 MAX_EMAILS = int(os.getenv("MAX_EMAILS", "5"))
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "true").lower() == "true"
-
-cookies_path = "cache/cookies.json"
+cookies_path = "cache/cookies2.json"
 
 def check_dns(url):
     try:
@@ -211,8 +210,8 @@ def check_email_once():
         if not logged_in:
             log("❌ ไม่สามารถเข้าสู่ระบบได้")
             return []
-        
-        time.sleep(3)
+        # กดยอมรับคุกกี้ ถ้ามี
+        time.sleep(5)
         # หลัง login → คลิกเข้าใช้งาน
         safe_click(driver, (By.XPATH, "/html/body/app-root/app-secure-layout/main/app-portal-page/div[1]/div[2]/div/app-service-container/p-card/div/div/div[2]/div/p-card/div/div/div[2]/div/p-button/button/span"))
 
@@ -230,7 +229,6 @@ def check_email_once():
         time.sleep(1)
         safe_click(driver, (By.XPATH, "/html/body/div[3]/div/div/div/button[2]"))
         time.sleep(2)
-
         return []
     finally:
         driver.quit()

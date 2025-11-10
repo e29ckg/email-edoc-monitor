@@ -1,6 +1,3 @@
-แน่นอน นี่คือไฟล์ `readme.md` ที่ปรับปรุงใหม่ให้น่าสนใจและอ่านง่ายขึ้นครับ
-
------
 
 # 📬 Email & Document Monitor
 
@@ -60,15 +57,23 @@ email-monitor/
 TELEGRAM_TOKEN=your_bot_token_here
 TELEGRAM_CHAT_ID=your_chat_id_here
 
-# --- Outlook Web Settings ---
+# ---  Web Mails Settings ---
 EMAIL_USER=your_email@example.com
 EMAIL_PASS=your_password
-OWA_URL=https://webmail.example.com/owa/
+OWA_URL=https://webmail.example.com
+
+EMAIL_USER=your_email@example.com
+EMAIL_PASS=your_password
+OWA_URL=https://webmail.example.com
 
 # --- E-Office Settings ---
 DOCUMENT_URL=http://e-office.example.com/login
 DOCUMENT_USER=your_username
 DOCUMENT_PASS=your_password
+
+ESARABAN_URL=https://e-saraban.example.com/login
+ESARABAN_USER=your_username
+ESARABAN_PASS=your_password
 
 # --- General Settings ---
 LOG_LEVEL=INFO
