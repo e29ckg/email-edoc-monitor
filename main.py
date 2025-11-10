@@ -36,11 +36,10 @@ def main():
     try:
         process_emails()
         process_emails2()
-        # process_documents()
+        process_documents()
         process_esarabun()
     except Exception as e:
         log(f"❌ เกิดข้อผิดพลาดใน main loop: {e}")
-
     log("✅ ตรวจสอบเสร็จสิ้น ระบบจะปิดตัวเอง")
 
 if __name__ == "__main__":
